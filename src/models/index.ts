@@ -6,3 +6,4 @@ export * from './productos-servicios.model';
 export * from './mascotas.model';
 export * from './pedidos.model';
 export * from './detalle-pedidos.model';
+export * from './credenciales.model';
