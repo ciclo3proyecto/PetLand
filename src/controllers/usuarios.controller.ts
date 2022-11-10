@@ -84,10 +84,10 @@ export class UsuariosController {
 
     //Enviar correo al usuario
     const destino = usuarios.Correo;
-    const asunto = 'Bienvenida y credenciales de acceso a la plataforma';
+    const asunto = 'Bienvenido a PetLand';
     const contenido =
-      `Hola ${usuarios.Nombres}, su usuario es ${usuarios.Correo}` +
-      `y la contraseña es ${contrasena}`;
+      `Hola ${usuarios.Nombres}, estas son sus credenciales para el acceso a la plataforma: Su usuario es ${usuarios.Usuario}` +
+      ` y su contraseña es ${contrasena}`;
 
     fetch(
       `http://127.0.0.1:5000/email?correo_destino=${destino}` +
