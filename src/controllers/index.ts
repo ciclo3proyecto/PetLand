@@ -11,3 +11,4 @@ export * from './sucursales.controller';
 export * from './mascotas.controller';
 export * from './productos-servicios.controller';
 export * from './pedidos.controller';
+export * from './planes.controller';

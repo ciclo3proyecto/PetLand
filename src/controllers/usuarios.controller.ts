@@ -1,3 +1,4 @@
+import {service} from '@loopback/core';
 import {
   Count,
   CountSchema,
@@ -7,24 +8,55 @@ import {
   Where,
 } from '@loopback/repository';
 import {
-  post,
-  param,
+  del,
   get,
   getModelSchemaRef,
+  HttpErrors,
+  param,
   patch,
+  post,
   put,
-  del,
   requestBody,
   response,
 } from '@loopback/rest';
-import {Usuarios} from '../models';
+import {Credenciales, Usuarios} from '../models';
 import {UsuariosRepository} from '../repositories';
-
+import {AutenticacionService} from '../services/autenticacion.service';
+const fetch = require('node-fetch');
 export class UsuariosController {
   constructor(
     @repository(UsuariosRepository)
-    public usuariosRepository : UsuariosRepository,
+    public usuariosRepository: UsuariosRepository,
+    @service(AutenticacionService)
+    public servicioAutenticacion: AutenticacionService,
   ) {}
+
+  @post('/identificarUsuario', {
+    responses: {
+      '200': {
+        description: 'Identificacion de usuarios',
+      },
+    },
+  })
+  async identificarUsuario(@requestBody() credenciales: Credenciales) {
+    const u = await this.servicioAutenticacion.identificarPersona(
+      credenciales.usuario,
+      credenciales.clave,
+    );
+    if (u != null) {
+      const token = this.servicioAutenticacion.generarTokenJWT(u);
+      return {
+        datos: {
+          nombre: u.Nombres,
+          correo: u.Correo,
+          id: u.Id,
+        },
+        tk: token,
+      };
+    } else {
+      throw new HttpErrors[401]('Datos Invalidos');
+    }
+  }
 
   @post('/usuarios')
   @response(200, {
@@ -44,7 +76,26 @@ export class UsuariosController {
     })
     usuarios: Omit<Usuarios, 'Id'>,
   ): Promise<Usuarios> {
-    return this.usuariosRepository.create(usuarios);
+    const contrasena = usuarios.Contrasena;
+    usuarios.Contrasena = this.servicioAutenticacion.cifrarClave(
+      usuarios.Contrasena,
+    );
+    const u = await this.usuariosRepository.create(usuarios);
+
+    //Enviar correo al usuario
+    const destino = usuarios.Correo;
+    const asunto = 'Bienvenido a PetLand';
+    const contenido =
+      `Hola ${usuarios.Nombres}, estas son sus credenciales para el acceso a la plataforma: Su usuario es ${usuarios.Usuario}` +
+      ` y su contraseña es ${contrasena}`;
+
+    fetch(
+      `http://127.0.0.1:5000/email?correo_destino=${destino}` +
+        `&asunto=${asunto}&contenido=${contenido}`,
+    ).then((data: unknown) => {
+      console.log(data);
+    });
+    return u;
   }
 
   @get('/usuarios/count')
@@ -52,9 +103,7 @@ export class UsuariosController {
     description: 'Usuarios model count',
     content: {'application/json': {schema: CountSchema}},
   })
-  async count(
-    @param.where(Usuarios) where?: Where<Usuarios>,
-  ): Promise<Count> {
+  async count(@param.where(Usuarios) where?: Where<Usuarios>): Promise<Count> {
     return this.usuariosRepository.count(where);
   }
 
@@ -106,7 +155,8 @@ export class UsuariosController {
   })
   async findById(
     @param.path.string('id') id: string,
-    @param.filter(Usuarios, {exclude: 'where'}) filter?: FilterExcludingWhere<Usuarios>
+    @param.filter(Usuarios, {exclude: 'where'})
+    filter?: FilterExcludingWhere<Usuarios>,
   ): Promise<Usuarios> {
     return this.usuariosRepository.findById(id, filter);
   }
