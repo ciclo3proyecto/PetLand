@@ -50,6 +50,7 @@ export class UsuariosController {
           nombre: u.Nombres,
           correo: u.Correo,
           id: u.Id,
+          rol: u.Rol,
         },
         tk: token,
       };
